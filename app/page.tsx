@@ -1,257 +1,396 @@
 "use client"
 
-import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-// Lucide icons
-import { FileText, Calendar, Users, Building, ExternalLink, TrendingUp, ChevronLeft } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
 
-// --- Mock UI Components for Single-File Context (Required to run) ---
-// Note: In a real Next.js/shadcn environment, you would import these from '@components/ui/...'
-
-const Card = ({ children, className }) => (
-  <div className={`rounded-xl shadow-xl ${className}`}>
-    {children}
-  </div>
-);
-
-const Badge = ({ children, className }) => (
-  <span className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${className}`}>
-    {children}
-  </span>
-);
-
-// We'll mock the Button for the final "View Full Paper" button as well
-const Button = ({ children, className, onClick }) => (
-  <button onClick={onClick} className={`inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 rounded-lg ${className}`}>
-    {children}
-  </button>
-);
-
-// --- Mock Data (Results Content) ---
-
-const mockResults = [
-  {
-    id: 1,
-    title: "Microgravity-Induced Changes in Skeletal Muscle Mitochondrial Function",
-    authors: ["Smith, J.", "Johnson, M.", "Williams, K."],
-    year: 2023,
-    institution: "NASA Ames Research Center",
-    abstract: "This study examines the effects of prolonged microgravity exposure on mitochondrial function in skeletal muscle tissue. Results indicate significant alterations in oxidative phosphorylation and ATP production.",
-    keywords: ["Microgravity", "Mitochondria", "Muscle Atrophy", "Spaceflight"],
-    citations: 45,
-    relevance: 98
-  },
-  {
-    id: 2,
-    title: "Gene Expression Profiles During Long-Duration Spaceflight",
-    authors: ["Chen, L.", "Rodriguez, A.", "Patel, S."],
-    year: 2024,
-    institution: "Johnson Space Center",
-    abstract: "Comprehensive transcriptomic analysis of astronaut samples collected before, during, and after 6-month ISS missions reveals adaptive immune responses and metabolic pathway modifications.",
-    keywords: ["Genomics", "Transcriptomics", "ISS", "Long-duration Flight"],
-    citations: 67,
-    relevance: 95
-  },
-  {
-    id: 3,
-    title: "Radiation Effects on Neural Stem Cell Differentiation",
-    authors: ["Anderson, T.", "Brown, E."],
-    year: 2023,
-    institution: "Kennedy Space Center",
-    abstract: "Investigation of cosmic radiation impacts on neural stem cell proliferation and differentiation patterns using ground-based analogs and space-flown samples.",
-    keywords: ["Radiation Biology", "Neuroscience", "Stem Cells", "Space Medicine"],
-    citations: 32,
-    relevance: 87
-  },
-  {
-    id: 4,
-    title: "Cardiovascular Adaptation in Simulated Mars Gravity",
-    authors: ["Martinez, R.", "Lee, H.", "Thompson, D."],
-    year: 2024,
-    institution: "Glenn Research Center",
-    abstract: "Study of cardiovascular system responses to Mars-equivalent gravity (0.38g) in human subjects using partial gravity analogs over 30-day periods.",
-    keywords: ["Cardiovascular", "Mars Simulation", "Partial Gravity", "Countermeasures"],
-    citations: 28,
-    relevance: 84
-  },
-  {
-    id: 5,
-    title: "Plant Growth Optimization in Lunar Regolith Simulant",
-    authors: ["Davis, K.", "White, J."],
-    year: 2023,
-    institution: "Langley Research Center",
-    abstract: "Analysis of plant growth parameters and nutrient uptake in various lunar regolith simulant compositions with biological amendments.",
-    keywords: ["Plant Biology", "Lunar Agriculture", "ISRU", "Life Support"],
-    citations: 41,
-    relevance: 79
-  }
+const CTAMessages = [
+  "INITIALIZE NEURAL MATRIX",
+  "DEPLOY QUANTUM ENGINE",
+  "ACTIVATE SYNTHESIS PROTOCOL",
+  "COMMENCE DEEP ANALYSIS",
+  "LAUNCH COGNITIVE FUSION",
+  "ENGAGE AI DISCOVERY",
+  "START KNOWLEDGE EXTRACTION",
+  "BEGIN PREDICTIVE MAPPING",
+  "INITIATE DATA ORCHESTRATION",
+  "ENABLE MULTI-OMICS SCAN"
 ]
 
-// --- Main Component Definition (ResultsContent is defined here) ---
-function ResultsContent() {
-  // Mock implementations for Next.js hooks if not running in a real environment
-  const router = { push: (path) => console.log(`Navigating to: ${path}`) };
-  const searchParams = { get: (key) => key === 'q' ? 'space biology' : null };
-  
-  // Replace these with actual hooks if running in Next.js:
-  // const router = useRouter()
-  // const searchParams = useSearchParams()
-  
-  const query = searchParams.get('q') || ''
-  const [results, setResults] = useState(mockResults)
-  const [sortBy, setSortBy] = useState<'relevance' | 'citations' | 'year'>('relevance')
+const PromptSuggestions = [
+  [
+    "Analyze microgravity effects on cellular mitochondrial function across mammalian species",
+    "Synthesize cross-study radiation exposure patterns in spaceflight experiments",
+    "Map temporal gene expression cascades during extended Mars-analog missions"
+  ],
+  [
+    "Correlate bone density metrics with countermeasure efficacy in lunar gravity simulations",
+    "Extract consensus mechanisms for plant growth optimization in controlled environment agriculture",
+    "Identify gaps in cardiovascular adaptation research for deep space exploration"
+  ],
+  [
+    "Generate predictive models for crew health trajectories using multi-omics integration",
+    "Compare immune system modulation across different spaceflight durations and missions",
+    "Evaluate neurocognitive performance trends under isolated and confined environments"
+  ],
+  [
+    "Synthesize actionable protocols for muscle atrophy prevention in zero-gravity conditions",
+    "Map knowledge networks connecting circadian rhythm disruption to mission performance",
+    "Identify convergent biomarkers across space biology experiments from 2010-2025"
+  ],
+  [
+    "Analyze metabolic pathway alterations in response to cosmic radiation exposure",
+    "Extract mission-critical insights from tissue engineering studies in microgravity",
+    "Correlate microbiome composition changes with psychological stress in astronauts"
+  ]
+]
+
+export default function Home() {
+  const [ctaText, setCTAText] = useState("")
+  const [prompts, setPrompts] = useState<string[]>([])
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [selectedPrompt, setSelectedPrompt] = useState<string | null>(null)
 
   useEffect(() => {
-    const sorted = [...mockResults].sort((a, b) => {
-      if (sortBy === 'relevance') return b.relevance - a.relevance
-      if (sortBy === 'citations') return b.citations - a.citations
-      if (sortBy === 'year') return b.year - a.year
-      return 0
-    })
-    setResults(sorted)
-  }, [sortBy])
+    setCTAText(CTAMessages[Math.floor(Math.random() * CTAMessages.length)])
+    setPrompts(PromptSuggestions[Math.floor(Math.random() * PromptSuggestions.length)])
+
+    setTimeout(() => setIsLoaded(true), 100)
+  }, [])
+
+  const router = useRouter()
+
+  const handleMainClick = () => {
+    if (selectedPrompt) {
+      router.push(`/results?q=${encodeURIComponent(selectedPrompt)}`)
+    } else {
+      router.push('/search')
+    }
+  }
+
+  const handlePromptClick = (prompt: string) => {
+    setSelectedPrompt(prompt)
+    console.log("Selected prompt:", prompt)
+  }
+
+  const handleLogoClick = () => {
+    window.location.reload()
+  }
+
+  const handleHomeClick = () => {
+    setSelectedPrompt(null)
+    console.log("Navigating to home")
+  }
+
+  const handleAboutClick = () => {
+    router.push('/about')
+  }
+
+  const handleBackgroundClick = (area: string) => {
+    console.log(`Clicked ${area}`)
+    if (area === 'earth') {
+      alert("🌍 Earth - Our home planet and the foundation of all space biology research")
+    } else if (area === 'satellite') {
+      alert("🛰️ International Space Station - Primary platform for microgravity experiments")
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900">
-      {/* Header */}
-      <header className="border-b border-blue-800/30 backdrop-blur-xl bg-slate-950/50 sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <button
-            onClick={() => router.push('/')}
-            className="flex items-center space-x-3 hover:scale-105 transition-transform"
-          >
-            <div className="bg-white rounded-full w-12 h-12 flex items-center justify-center">
-              <div className="text-black font-bold text-[10px] text-center leading-tight">
-                ESBN<br/>
-                <span className="text-[6px]">2025</span>
-              </div>
-            </div>
-          </button>
-          <nav className="flex items-center space-x-6 text-white text-sm">
-            <button onClick={() => router.push('/')} className="hover:text-blue-400 transition-colors">Home</button>
-            <button onClick={() => router.push('/search')} className="hover:text-blue-400 transition-colors">Search</button>
-            <button onClick={() => router.push('/about')} className="hover:text-blue-400 transition-colors">About</button>
-          </nav>
-        </div>
-      </header>
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center">
+      <style jsx global>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          33% { transform: translateY(-20px) rotate(2deg); }
+          66% { transform: translateY(-10px) rotate(-2deg); }
+        }
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.5); }
+        }
+        @keyframes drift {
+          0% { transform: translateX(0) translateY(0); }
+          100% { transform: translateX(-100px) translateY(100px); }
+        }
+        @keyframes nebula {
+          0%, 100% { opacity: 0.4; filter: hue-rotate(0deg); }
+          50% { opacity: 0.6; filter: hue-rotate(30deg); }
+        }
+        @keyframes earthRotate {
+          0% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-30px) scale(1.05); }
+          100% { transform: translateY(0) scale(1); }
+        }
+      `}</style>
+
+      {/* Multi-Layer Space Background */}
+      <div className="absolute inset-0 bg-black">
+        {/* Deep Space Layer */}
+        <div
+          className="absolute inset-0 opacity-90"
+          style={{
+            backgroundImage: 'url(https://images.pexels.com/photos/2150/sky-space-dark-galaxy.jpg?auto=compress&cs=tinysrgb&w=1920)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+
+        {/* Nebula Overlay */}
+        <div
+          className="absolute inset-0 opacity-30 mix-blend-screen"
+          style={{
+            backgroundImage: 'radial-gradient(ellipse at 20% 30%, rgba(138, 43, 226, 0.4) 0%, transparent 50%), radial-gradient(ellipse at 80% 70%, rgba(30, 144, 255, 0.3) 0%, transparent 50%)',
+            animation: 'nebula 15s ease-in-out infinite'
+          }}
+        />
+      </div>
+
+      {/* Complex Multi-Layer Star Field */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Layer 1: Large Bright Stars */}
+        {[...Array(50)].map((_, i) => (
+          <div
+            key={`star-lg-${i}`}
+            className="absolute bg-white rounded-full"
+            style={{
+              width: `${2 + Math.random() * 3}px`,
+              height: `${2 + Math.random() * 3}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animation: `twinkle ${2 + Math.random() * 4}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 5}s`,
+              boxShadow: '0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,255,255,0.4)'
+            }}
+          />
+        ))}
+
+        {/* Layer 2: Medium Stars with Color */}
+        {[...Array(100)].map((_, i) => {
+          const colors = ['rgba(255,255,255,0.9)', 'rgba(173,216,230,0.9)', 'rgba(255,250,205,0.9)', 'rgba(255,192,203,0.9)'];
+          return (
+            <div
+              key={`star-md-${i}`}
+              className="absolute rounded-full"
+              style={{
+                width: '2px',
+                height: '2px',
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                backgroundColor: colors[Math.floor(Math.random() * colors.length)],
+                animation: `twinkle ${1 + Math.random() * 3}s ease-in-out infinite`,
+                animationDelay: `${Math.random() * 3}s`,
+                boxShadow: `0 0 4px ${colors[Math.floor(Math.random() * colors.length)]}`
+              }}
+            />
+          );
+        })}
+
+        {/* Layer 3: Tiny Distant Stars */}
+        {[...Array(200)].map((_, i) => (
+          <div
+            key={`star-sm-${i}`}
+            className="absolute w-px h-px bg-white rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              opacity: Math.random() * 0.7 + 0.3,
+              animation: `twinkle ${3 + Math.random() * 5}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 8}s`
+            }}
+          />
+        ))}
+
+        {/* Shooting Stars */}
+        {[...Array(3)].map((_, i) => (
+          <div
+            key={`shooting-${i}`}
+            className="absolute h-px bg-gradient-to-r from-transparent via-white to-transparent"
+            style={{
+              width: '100px',
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 50}%`,
+              animation: `drift ${5 + Math.random() * 5}s linear infinite`,
+              animationDelay: `${Math.random() * 10}s`,
+              opacity: 0.6,
+              transform: 'rotate(-45deg)'
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Massive Earth with Atmospheric Glow */}
+      <div
+        className="absolute cursor-pointer"
+        style={{
+          bottom: '-40%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '180%',
+          height: '180%',
+          animation: 'earthRotate 30s ease-in-out infinite'
+        }}
+        onClick={() => handleBackgroundClick('earth')}
+      >
+        {/* Earth's Atmosphere Glow */}
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(100, 149, 237, 0.3) 0%, rgba(30, 144, 255, 0.2) 40%, transparent 70%)',
+            filter: 'blur(40px)',
+            transform: 'scale(1.1)'
+          }}
+        />
+
+        {/* Earth Image */}
+        <div
+          className="absolute inset-0 rounded-full overflow-hidden"
+          style={{
+            backgroundImage: 'url(https://images.pexels.com/photos/220201/pexels-photo-220201.jpeg?auto=compress&cs=tinysrgb&w=1920)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            boxShadow: 'inset -40px -40px 100px rgba(0,0,0,0.8), 0 0 100px rgba(100, 149, 237, 0.4)'
+          }}
+        />
+
+        {/* Earth's Cloud Layer */}
+        <div
+          className="absolute inset-0 rounded-full opacity-30 mix-blend-screen"
+          style={{
+            background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 70%)'
+          }}
+        />
+      </div>
+
+      {/* ISS with Complex Details */}
+      <div
+        className="absolute top-20 right-20 cursor-pointer group"
+        style={{
+          animation: 'float 8s ease-in-out infinite'
+        }}
+        onClick={() => handleBackgroundClick('satellite')}
+      >
+        {/* ISS Glow Effect */}
+        <div className="absolute inset-0 w-32 h-32 bg-blue-400 rounded-full blur-2xl opacity-30 group-hover:opacity-50 transition-opacity" />
+
+        {/* ISS Image */}
+        <div
+          className="relative w-32 h-32 opacity-70 group-hover:opacity-100 transition-all transform group-hover:scale-125"
+          style={{
+            backgroundImage: 'url(https://images.pexels.com/photos/23764/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=400)',
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            filter: 'drop-shadow(0 0 20px rgba(100, 149, 237, 0.6))'
+          }}
+        />
+
+        {/* Orbital Trail */}
+        <div className="absolute top-1/2 right-full w-64 h-px bg-gradient-to-l from-blue-400/50 to-transparent" />
+      </div>
+
+      {/* Floating Cosmic Dust Particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(30)].map((_, i) => (
+          <div
+            key={`dust-${i}`}
+            className="absolute rounded-full bg-white/10 blur-sm"
+            style={{
+              width: `${5 + Math.random() * 15}px`,
+              height: `${5 + Math.random() * 15}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animation: `float ${10 + Math.random() * 20}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 10}s`
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Logo */}
+      <div className="absolute top-8 left-8 z-20">
+        <button
+          onClick={handleLogoClick}
+          className="bg-white rounded-full w-16 h-16 flex items-center justify-center hover:scale-110 transition-transform shadow-lg hover:shadow-xl"
+        >
+          <div className="text-black font-bold text-xs text-center leading-tight">
+            ESBN<br/>
+            <span className="text-[8px]">2025</span>
+          </div>
+        </button>
+      </div>
+
+      {/* Top Right Nav */}
+      <div className="absolute top-8 right-8 z-20 text-white text-sm flex items-center space-x-6">
+        <button
+          onClick={handleHomeClick}
+          className="cursor-pointer hover:text-blue-400 transition-colors font-medium hover:scale-110 transform"
+        >
+          Home
+        </button>
+        <button
+          onClick={handleAboutClick}
+          className="cursor-pointer hover:text-blue-400 transition-colors font-medium hover:scale-110 transform"
+        >
+          About
+        </button>
+      </div>
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-12">
-        <div className="max-w-6xl mx-auto">
-          {/* Back Button & Query Info */}
-          <div className="mb-8">
-            {/* The custom back button implementation */}
-            <div className="flex justify-start mb-4">
-              <button
-                onClick={() => router.push('/search')}
-                className="px-8 py-3 bg-blue-500 hover:bg-blue-600 text-white text-lg font-semibold rounded-2xl shadow-lg transition-all duration-200 flex items-center"
-              >
-                <ChevronLeft className="w-5 h-5 mr-2" />
-                Go to New Search
-              </button>
-            </div>
-            {/* End custom back button */}
+      <div className={`relative z-10 text-center px-8 transition-all duration-1000 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+        {/* Main Title Box */}
+        <button
+          onClick={() => console.log("Title clicked")}
+          className="mb-12 border-4 border-blue-500 p-8 bg-black/40 backdrop-blur-sm hover:border-blue-400 hover:bg-black/50 transition-all cursor-pointer group"
+        >
+          <h1 className="text-8xl md:text-9xl font-black text-white tracking-wider leading-none group-hover:scale-105 transition-transform">
+            THIS IS
+            <br />
+            <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-teal-400 bg-clip-text text-transparent">
+              SPACE
+            </span>
+          </h1>
+        </button>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl font-bold text-white mb-2">Search Results</h2>
-                <p className="text-slate-400">
-                  Found <span className="text-blue-400 font-semibold">{results.length} publications</span> for "{query}"
-                </p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-slate-400 text-sm">Sort by:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="bg-slate-800 text-white px-4 py-2 rounded-lg border border-slate-700 focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="relevance">Relevance</option>
-                  <option value="citations">Citations</option>
-                  <option value="year">Year</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Results List */}
-          <div className="space-y-6">
-            {results.map((result) => (
-              <Card key={result.id} className="p-6 bg-slate-800/50 border-slate-700/50 hover:border-blue-500/50 transition-all duration-300">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-white mb-2 hover:text-blue-400 cursor-pointer transition-colors">
-                      {result.title}
-                    </h3>
-                    <div className="flex items-center space-x-4 text-sm text-slate-400 mb-3">
-                      <div className="flex items-center space-x-1">
-                        <Users className="w-4 h-4" />
-                        <span>{result.authors.join(', ')}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="w-4 h-4" />
-                        <span>{result.year}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Building className="w-4 h-4" />
-                        <span>{result.institution}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end space-y-2 ml-4">
-                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-                      {result.relevance}% Match
-                    </Badge>
-                    <div className="flex items-center space-x-1 text-slate-400 text-sm">
-                      <TrendingUp className="w-4 h-4" />
-                      <span>{result.citations} citations</span>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="text-slate-300 mb-4 leading-relaxed">
-                  {result.abstract}
-                </p>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-wrap gap-2">
-                    {result.keywords.map((keyword, idx) => (
-                      <Badge key={idx} className="border-slate-600 text-slate-400 bg-transparent border">
-                        {keyword}
-                      </Badge>
-                    ))}
-                  </div>
-                  <Button
-                    onClick={() => console.log(`Viewing full paper for: ${result.title}`)}
-                    className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    View Full Paper
-                    <ExternalLink className="w-3 h-3 ml-2" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+        {/* CTA Button */}
+        <div className="mb-8">
+          <Button
+            onClick={handleMainClick}
+            className="px-12 py-8 text-xl font-bold bg-gray-600 hover:bg-gray-500 text-white rounded-full transition-all duration-300 shadow-2xl hover:shadow-blue-500/50 hover:scale-110 cursor-pointer"
+          >
+            {ctaText}
+          </Button>
         </div>
-      </main>
+
+        {/* Random Prompts */}
+        <div className="max-w-4xl mx-auto space-y-3">
+          {prompts.map((prompt, idx) => (
+            <button
+              key={idx}
+              onClick={() => handlePromptClick(prompt)}
+              className={`w-full bg-gray-700/80 backdrop-blur-md text-white px-6 py-4 rounded-full text-sm transition-all duration-300 cursor-pointer hover:scale-105 hover:bg-gray-600/80 ${
+                selectedPrompt === prompt ? 'ring-2 ring-blue-400 bg-blue-900/50' : ''
+              }`}
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+
+        {selectedPrompt && (
+          <div className="mt-6 text-blue-300 text-sm animate-pulse">
+            ✓ Query selected - Click button above to execute
+          </div>
+        )}
+      </div>
+
+      {/* Bottom NASA Attribution */}
+      <button
+        onClick={() => window.open('https://www.spaceappschallenge.org', '_blank')}
+        className="absolute bottom-8 left-0 right-0 text-center text-white/60 text-xs z-20 hover:text-white/90 transition-colors cursor-pointer"
+      >
+        NASA Space Apps Challenge 2025 • Space Biology Knowledge Engine
+      </button>
     </div>
   )
 }
 
-// --- Wrapper/Export Component (ResultsPage is defined last) ---
-
-export default function ResultsPage() {
-  return (
-    // Suspense is used because useSearchParams is called inside ResultsContent
-    // This allows Next.js to render the page while waiting for the search parameters.
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading search results...</div>
-      </div>
-    }>
-      <ResultsContent />
-    </Suspense>
-  )
-}
 
